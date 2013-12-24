@@ -1,0 +1,4 @@
+name = scald_migrate
+description = scald migrate
+core = 7.x
+package = 'scald_migrate'

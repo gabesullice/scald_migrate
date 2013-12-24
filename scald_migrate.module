@@ -1,0 +1,190 @@
+<?php
+
+function scald_migrate_node_update($node) {
+
+  // On a node update, run the migration. Don't worry, we'll be checking types
+  // and fields later on.
+
+  _scald_migrate_image_migrate($node);
+}
+
+function _scald_migrate_image_migrate($node) {
+
+  // This will check to ensure that the node you’re updating is of the type that
+  // we want to migrate. Just in case we make a mistake in VBO. It will also make
+  // sure that it has an image field and that that field actually has an image in
+  // it. If not, we’ll just return and do nothing.
+
+  if (FALSE == $image_info = _scald_migrate_check_node($node)) {
+    return;
+  }
+
+
+  // This ensure that the Scald Image field has not already been set.
+
+  if (!empty($node->field_image_atom)) {
+      return;
+  }
+
+  // This is where the meat begins, if the node is operable we go ahead and send
+  // relevant info out to be built into and atom object.
+
+  $atom = _scald_migrate_build_atom($image_info);
+
+  // Once the atom has been built out, we call this to save the atom. Since each
+  // atom is its own entity. We’re actually creating new content that will be
+  // reusable and completely fieldable on its own. In addition to be able to be
+  // used in Views and in many places. A successful atom save will return a
+  // unique Scald Id, otherwise, FALSE.
+
+  $sid = scald_atom_save($atom);
+
+  // Now that there’s an atom to reference, we’re going to set the atom reference
+  // field on the node that we’re migrating to use Scald images.
+  // entity_metadata_wrapper is a simple way of modifying entity values quickly
+  // and easily provided by the Entity API module.
+
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+
+  // Check that the Scald Atom was successfully saved and, if so, set the atom
+  // reference field to the Scald Id. Every atom is just a Drupal entity that is
+  // referenced on a node and then loaded by it’s unique ID as necessary. it’s a
+  // lightweight solution for reusing images without uploading them multiple
+  // times and without needed a file browser like IMCE.
+
+  if ($sid != FALSE) {
+    $node_wrapper->field_image_atom->set($sid);
+  }
+}
+
+function _scald_migrate_check_node($node) {
+
+  // This is where you want to put all the machine names of the content types on
+  // which you'd like to perform a migration. These were mine, but you should
+  // just write in your own.
+
+  $node_types = array(
+    'case_study',
+    'page',
+    'promo',
+  );
+
+  // Of the content types that you'll be migrating, here is where you should put
+  // the machine names of the Drupal image fields you'll be migrating from.
+
+  $node_fields = array(
+    'field_page_image',
+    'field_promo_image',
+  );
+
+  // Here, we'll check that the node is a node that we want to be migrating.
+
+  if (!in_array($node->type, $node_types)) {
+    return FALSE;
+  }
+
+  // Here we're just going to initiate an empty var to keep track of whether or
+  // not the node we're migrating has an image field. And if it does, the name of
+  // that field.
+
+  $image_field = NULL;
+
+  // We're going to loop over the possible image fields we specified above and
+  // check if the node has that field. Then set $image_field equal to that field
+  // if it does. NB. This won't work you're migrating more than one field per
+  // content type, but that should be too hard to adapt this code to. I'm open to
+  // forks! ;)
+
+  foreach ($node_fields as $node_field) {
+    if (property_exists($node, $node_field)) {
+
+      // This field contains meta info about the image file like height and width
+
+      $image_field = $node->$node_field;
+    }
+  }
+
+  // Easy enough, if the re was no image field, return FALSE.
+
+  if ($image_field == NULL) {
+    return FALSE;
+  }
+
+  // We don't want to try to migrate a field which has nothing to migrate. Here we
+  // check to see if the image field actually has an image. If not, return FALSE.
+
+  if (empty($image_field)) {
+    return FALSE;
+  }
+  // In the case that it does, we're going to build a simple array of
+  // useful information that we'll need to build out our new atom.
+
+  else {
+    $image_info = array(
+
+      'file_field' => $image_field,
+
+      // This is loads the image file associated with the image field we're
+      // migrating from. It has information like file location, file size, type,
+      // ID, and so on.
+
+      'file' => file_load($image_field['und'][0]['fid']),
+    );
+
+    // We're all good to go, return the information.
+
+    return $image_info;
+  }
+}
+
+function _scald_migrate_build_atom(array $image_info) {
+
+  // Alright this is the heart of the migration. Creating a new atom. Let's
+  // initialize a new class.
+
+  $atom = new stdClass();
+
+  // Here, we'll provide information about the atom.
+
+  $atom->type = 'image'; // We're migrating images
+
+  // Scald used 'providers' for atom reference fields. In this case, we'll be
+  // using the 'scald_image' provider as opposed to 'scald_youtube' or something
+  // like that.
+
+  $atom->provider = 'scald_image';
+  $atom->publisher = 1; // We'll say that the author of this atom was UID 1, that's the anonymous user.
+  $atom->language = 'und'; // Alter as necessary
+  $atom->actions = 5; // This sets the available actions on the atom, i.e. view, fetch, delete, and edit. 5 is what Scald sets by default.
+
+  // This is really up to you to determine what you want the title to be, but I
+  // decided to set my Atom title to the filename; w/o the extension; w/ spaces
+  // instead of underscores; with words capitalized.
+
+  $atom->title = ucwords(str_replace('_',' ',drupal_basename($image_info['file']->filename)));
+
+  // The base id is a unique identifier which I suppose could be any unique int,
+  // but I just set it to fid because it seemed reasonable.
+
+  $atom->base_id = $image_info['file']->fid;
+
+  // For some reason, there's a lot of info stored in the scald_thumbnail array.
+  // I think they're pretty self explanatory and aside fromt fid, height, and
+  // width, feel free to set these to your needs.
+
+  $atom->scald_thumbnail['und'][0]['fid'] = $image_info['file']->fid;
+  $atom->scald_thumbnail['und'][0]['display'] = '1';
+  $atom->scald_thumbnail['und'][0]['width'] = $image_info['file_field']['und'][0]['width'];
+  $atom->scald_thumbnail['und'][0]['height'] = $image_info['file_field']['und'][0]['height'];
+  $atom->scald_thumbnail['und'][0]['description'] = '';
+  $atom->scald_thumbnail['und'][0]['upload_button'] = 'Upload';
+  $atom->scald_thumbnail['und'][0]['remove_button'] = 'Remove';
+  $atom->scald_thumbnail['und'][0]['upload'] = '';
+  $atom->scald_thumbnail['und'][0]['alt'] = $atom->title;
+  $atom->scald_thumbnail['und'][0]['title'] = $atom->title;
+
+  // At this point we've only initialized a class that will be used to actually
+  // save the atom. We'll return it and save it soon.
+
+  return $atom;
+}
