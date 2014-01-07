@@ -9,7 +9,7 @@ This module is intended to be used with Drupal and migrate images on nodes from 
 This repo is meant to be used in tandem with [this blog post](www.elevartedthird.com). You probably can't use just this repo or just read the blog post. You'll need to take them as a pair.
 
 ##Contributing
-Feel free to submit a pull request and follow Drupal coding standards. I can't promise I'll pull anything and cetainly can't promise it in a timely manner, but I'll try ;).
+Feel free to submit a pull request. Please follow Drupal coding standards and the git-flow model. I can't promise I'll pull anything and cetainly can't promise it in a timely manner, but I'll try ;).
 
 ##License
 
