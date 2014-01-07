@@ -36,8 +36,8 @@ function _scald_migrate_image_migrate($node) {
 
   // Once the atom has been built out, we call this to save the atom. Since each
   // atom is its own entity. We’re actually creating new content that will be
-  // reusable and completely fieldable on its own. In addition to be able to be
-  // used in Views and in many places. A successful atom save will return a
+  // reusable and completely fieldable on its own, in addition to being able to
+  // be used in Views and elsewhere. A successfully saved atom will return a
   // unique Scald Id, otherwise, FALSE.
 
   $sid = scald_atom_save($atom);
