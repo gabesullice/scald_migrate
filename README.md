@@ -2,7 +2,7 @@
 ##Purpose
 This module is intended to be used with Drupal and migrate images on nodes from Drupal's default image module to the Scald Module. It is *a framework and example* and **is NOT intended for production use out-of-the-box.**
 ##Documentation
-This repo is meant to be used in tandem with [this blog post](http://www.elevartedthird.com). You probably can't use just this repo or just read the blog post. You'll need to take them as a pair.
+This repo is meant to be used in tandem with [this blog post](http://www.elevatedthird.com/blog/scald-migration-drupal-images-scald-media-management). You probably can't use just this repo or just read the blog post. You'll need to take them as a pair.
 ##Contributing
 Feel free to submit a pull request. Please follow Drupal coding standards and the git-flow model. I can't promise I'll pull anything and certainly can't promise it in a timely manner, but I'll try ;).
 ##License
